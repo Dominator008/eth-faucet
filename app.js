@@ -1,9 +1,9 @@
-const h = require('h')
-const xhr = require('xhr')
-const EthQuery = require('eth-query')
-const metamask = require('metamascara')
+const h = require('h');
+const xhr = require('xhr');
+const EthQuery = require('eth-query');
+const metamask = require('metamascara');
 
-var state = {
+const state = {
   isLoading: true,
 
   // injected at build time
@@ -15,66 +15,77 @@ var state = {
   errorMessage: null,
 
   transactions: [],
-}
+};
 
-window.addEventListener('load', startApp)
+window.addEventListener('load', startApp);
 
-
-function startApp(){
+function startApp() {
   // check environment
   if (!global.web3) {
     // abort
     if (!window.ENABLE_MASCARA) {
-      render(h('span', 'No web3 detected.'))
-      return
+      render(h('span', 'No web3 detected.'));
+      return;
     }
     // start mascara
-    const provider = metamask.createDefaultProvider({})
-    global.web3 = { currentProvider: provider }
+    const provider = metamask.createDefaultProvider({});
+    global.web3 = {currentProvider: provider};
   }
 
   // create query helper
-  global.ethQuery = new EthQuery(global.web3.currentProvider)
+  global.ethQuery = new EthQuery(global.web3.currentProvider);
 
-  renderApp()
-  updateStateFromNetwork()
-  setInterval(updateStateFromNetwork, 4000)
+  renderApp();
+  updateStateFromNetwork();
+  setInterval(updateStateFromNetwork, 4000);
 }
 
-function updateStateFromNetwork(){
-  getAccounts()
-  getBalances()
-  renderApp()
+function updateStateFromNetwork() {
+  getAccounts();
+  getBalances();
+  renderApp();
 }
 
-function getAccounts(){
-  global.ethQuery.accounts(function(err, accounts){
-    if (err) return console.error(err)
-    var address = accounts[0]
-    if (state.userAddress === address) return
-    state.userAddress = address
-    state.fromBalance = null
-    getBalances()
-    renderApp()
-  })
+function getAccounts() {
+  global.ethQuery.accounts(function(err, accounts) {
+    if (err) {
+      return console.error(err);
+    }
+    const address = accounts[0];
+    if (state.userAddress === address) {
+      return;
+    }
+    state.userAddress = address;
+    state.fromBalance = null;
+    getBalances();
+    renderApp();
+  });
 }
 
-function getBalances(){
-  if (state.faucetAddress) global.ethQuery.getBalance(state.faucetAddress, function(err, result){
-    if (err) return console.error(err)
-    state.faucetBalance = (parseInt(result, 16)/1e18).toFixed(2)
-    renderApp()
-  })
-  if (state.userAddress) global.ethQuery.getBalance(state.userAddress, function(err, result){
-    if (err) return console.error(err)
-    state.fromBalance = (parseInt(result, 16)/1e18).toFixed(2)
-    renderApp()
-  })
+function getBalances() {
+  if (state.faucetAddress) {
+    global.ethQuery.getBalance(state.faucetAddress, function(err, result) {
+      if (err) {
+        return console.error(err);
+      }
+      state.faucetBalance = (parseInt(result, 16) / 1e18).toFixed(2);
+      renderApp();
+    });
+  }
+  if (state.userAddress) {
+    global.ethQuery.getBalance(state.userAddress, function(err, result) {
+      if (err) {
+        return console.error(err);
+      }
+      state.fromBalance = (parseInt(result, 16) / 1e18).toFixed(2);
+      renderApp();
+    });
+  }
 }
 
-function renderApp(){
+function renderApp() {
   // if (state.isLoading) {
-  //   return render(h('span', 'web3 detected - Loading...'))
+  //   return render(h('span', 'web3 detected - Loading...'));
   // }
 
   render([
@@ -154,18 +165,20 @@ function renderApp(){
 
     state.errorMessage ? h('div', { style: { color: 'red', } }, state.errorMessage) : null,
 
-  ])
+  ]);
 }
 
-function link(url, content){
-  return h('a', { href: url, target: '_blank' }, content)
+function link(url, content) {
+  return h('a', {href: url, target: '_blank'}, content);
 }
 
-function getEther(){
-  if (!state.userAddress) return alert('no user accounts found')
-  var uri = window.location.href
-  var http = new XMLHttpRequest()
-  var data = state.userAddress
+function getEther() {
+  if (!state.userAddress) {
+    return alert('no user accounts found');
+  }
+  const uri = window.location.href;
+  const http = new XMLHttpRequest();
+  const data = state.userAddress;
 
   xhr({
     method: 'POST',
@@ -174,57 +187,64 @@ function getEther(){
     headers: {
       'Content-Type': 'application/rawdata',
     }
-  }, function (err, resp, body) {
-    // display error
-    if (err) {
-      state.errorMessage = err || err.stack
-      return
-    }
-    // display error-in-body
-    try {
-      if (body.slice(0,2) === '0x') {
-        state.transactions.push(body)
-      } else {
-        state.errorMessage = body
-      }
-    } catch (err) {
-      state.errorMessage = err || err.stack
-    }
-    // display tx hash
-    console.log('faucet response:', body)
-    updateStateFromNetwork()
-  })
+  },
+      function(err, resp, body) {
+        // display error
+        if (err) {
+          state.errorMessage = err || err.stack;
+          return;
+        }
+        // display error-in-body
+        try {
+          if (body.slice(0, 2) === '0x') {
+            state.transactions.push(body);
+          } else {
+            state.errorMessage = body;
+          }
+        } catch (err) {
+          state.errorMessage = err || err.stack;
+        }
+        // display tx hash
+        console.log('faucet response:', body);
+        updateStateFromNetwork();
+      });
 }
 
-function sendTx(value){
-  if (!state.userAddress) return alert('no user accounts found')
-  global.ethQuery.sendTransaction({
-    from: state.userAddress,
-    to: state.faucetAddress,
-    value: '0x'+(value*1e18).toString(16),
-  }, function(err, txHash){
-    if (err) {
-      state.errorMessage = (err && err.stack)
-    } else {
-      console.log('user sent tx:', txHash)
-      state.errorMessage = null
-      state.transactions.push(txHash)
-    }
-    updateStateFromNetwork()
-  })
+function sendTx(value) {
+  if (!state.userAddress) {
+    return alert('no user accounts found');
+  }
+  global.ethQuery.sendTransaction(
+      {
+        from: state.userAddress,
+        to: state.faucetAddress,
+        value: '0x' + (value * 1e18).toString(16),
+      },
+      function(err, txHash) {
+        if (err) {
+          state.errorMessage = (err && err.stack);
+        } else {
+          console.log('user sent tx:', txHash);
+          state.errorMessage = null;
+          state.transactions.push(txHash);
+        }
+        updateStateFromNetwork();
+      });
 }
 
-function render(elements){
-  if (!Array.isArray(elements)) elements = [elements]
-  elements = elements.filter(Boolean)
+function render(elements) {
+  if (!Array.isArray(elements)) {
+    elements = [elements];
+  }
+  elements = elements.filter(Boolean);
   // clear
-  document.body.innerHTML = ''
+  document.body.innerHTML = '';
   // insert
-  elements.forEach(function(element){
-    document.body.appendChild(element)
-  })
+  elements.forEach(function(element) {
+    document.body.appendChild(element);
+  });
 }
 
-function formatBalance(balance){
-  return balance ? balance+' ether' : '...'
+function formatBalance(balance) {
+  return balance ? balance + ' ether' : '...';
 }
