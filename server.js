@@ -99,17 +99,24 @@ function startServer(appCode) {
           if (balanceTooFull) {
             return didError(new Error('User is greedy.'));
           }
-          // send value
-          ethQuery
-              .sendTransaction({
-                to: targetAddress,
-                from: config.address,
-                value: faucetAmountWei,
-                data: '',
-              })
-              .then(function(result) {
-                console.log('sent tx:', result);
-                res.send(result);
+
+          ethQuery.gasPrice()
+              .then(function(price) {
+                const adjustedPrice = Math.max(Number(price), 2e9);
+                // send value
+                ethQuery
+                    .sendTransaction({
+                      to: targetAddress,
+                      from: config.address,
+                      value: faucetAmountWei,
+                      data: '',
+                      gasPrice: adjustedPrice
+                    })
+                    .then(function(result) {
+                      console.log('sent tx:', result);
+                      res.send(result);
+                    })
+                    .catch(didError);
               })
               .catch(didError);
         })
