@@ -85,7 +85,7 @@ function startServer(appCode) {
   // the fauceting request
   app.post('/', function(req, res) {
     // parse request
-    const targetAddress = req.body;
+    let targetAddress = req.body;
     if (targetAddress.slice(0, 2) !== '0x') {
       targetAddress = '0x' + targetAddress;
     }
